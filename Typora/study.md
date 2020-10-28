@@ -2626,3 +2626,36 @@ Date:   Fri May 18 21:06:15 2018 +0800
 - 命令`git push origin --tags`可以推送全部未推送过的本地标签；
 - 命令`git tag -d <tagname>`可以删除一个本地标签；
 - 命令`git push origin :refs/tags/<tagname>`可以删除一个远程标签。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
