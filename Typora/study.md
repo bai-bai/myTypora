@@ -76,7 +76,51 @@
 堆：堆是向高地址扩展的数据结构，是不连续的内存区域。这是由于系统是用链表来存储的空闲内存地址的，自然是不连续的，而链表的遍历方向是由低地址向高地址。堆的大小受限于计算机系统中有效的虚拟内存。由此可见，堆获得的空间比较灵活，也比较大。
 ```
 
+## [JAVA SPI](https://www.cnblogs.com/jy107600/p/11464985.html)
 
+> - 概念
+>   - SPI 全程 Service Provider Interface，是Java提供的一套用来被第三方实现和扩展的接口，它可以用来对框架的组件进行扩展和替换，它的作用就是为被扩展的接口寻找实现。
+> - SPI和API的使用场景
+>   - API（Application Programming Interface），在大多数情况下，是由实现方提供接口并实现，调用者不能自由选择外部实现。从使用人员上来说，API 直接被应用开发人员使用。
+>   - SPI（Service Provider Interface），是由调用方制定接口规范并提供外部实现，调用方在调用时自行选择外部实现。从使用人员上来说，SPI由框架扩展人员使用。
+
+```java
+//接口提供
+public interface UploadCDN {
+    void upload(String url);
+}
+
+//外部实现一
+public class QiyiCDN implements UploadCDN {  //上传爱奇艺cdn
+    @Override
+    public void upload(String url) {
+        System.out.println("upload to qiyi cdn");
+    }
+}
+//外部实现二
+public class ChinaNetCDN implements UploadCDN {//上传网宿cdn
+    @Override
+    public void upload(String url) {
+        System.out.println("upload to chinaNet cdn");
+    }
+}
+
+//需要在resources目录下新建META-INF/services目录，并且在这个目录下新建一个与上述接口的全限定名一致的文件，在这个文件中写入接口的实现类的全限定名
+
+//调用
+public static void main(String[] args) {
+    ServiceLoader<UploadCDN> uploadCDN = ServiceLoader.load(UploadCDN.class);
+    for (UploadCDN u : uploadCDN) {
+        u.upload("filePath");
+    }
+}
+```
+
+### SPI总结
+
+- 不需要改动源码就可以实现扩展，解耦。
+- 实现扩展对原来的代码几乎没有侵入性。
+- 只需要添加配置就可以实现扩展，符合开闭原则。
 
 ## Mybatis
 
@@ -2631,31 +2675,89 @@ Date:   Fri May 18 21:06:15 2018 +0800
 
 
 
+# SpringBoot
 
+## Springboot启动的初始化
 
+![image-20201030110813493](F:\Other\Typora\Image\image-20201030110813493.png)
 
+```java
+如上图所示，run方法中主要分为两个步骤
 
+- new SpringApplication：环境的初始化和其他的准备工作
+- run：启动容器，以及自动配置类的服务
+```
 
+![image-20201030111335058](F:\Other\Typora\Image\image-20201030111335058.png)
 
+```java
+如上图，new SpringApplication 中的初始化工作
 
+1.设置初始化器
+2.设置容器的监听器
+```
 
+![image-20201030112209936](F:\Other\Typora\Image\image-20201030112209936.png)
 
+```java
+如上图，此处是对如何进行SpringBoot初始化容器的配置的调用
+```
 
+![image-20201030112828975](F:\Other\Typora\Image\image-20201030112828975.png)
 
+```java
+如上图，SpringBoot容器的初始化工作
+    
+关键逻辑为：利用SpringFactortiesLoader类对所有Jar包资源进行扫描，找出位于Jar包下，META-INF/spring.factorties的文件
+		  并扫描每个文件中的各项配置（如：自动配置类的名字、Springboot初始化器等），其中关键参数type，则是将扫描结果进行
+    	  筛选，此处传入的应该为ApplicationContextInitializer（Springboot的初始化器）
+    	  而且在扫描的过程中，也会对所有扫描到的资源进行缓存，在之后的运行中，则会在缓存中进行查找，而不需要再次进行扫描。
+```
 
+![image-20201030113127039](F:\Other\Typora\Image\image-20201030113127039.png)
 
+```
+如上图，展示的是springboot的初始化器
+```
 
+![image-20201030150355668](F:\Other\Typora\Image\image-20201030150355668.png)
 
+```java
+如上图，为SpringFactortiesLoader类对Jar包资源进行扫描的实现调用
+```
 
+![image-20201030153014671](F:\Other\Typora\Image\image-20201030153014671.png)
 
+```xml
+如上图，为SpringFactortiesLoader类对Jar包资源进行扫描的实现逻辑
 
+其中包含了三重循环
+第一重，所有的Jar资源进行循环
 
+第二重，对扫描到的Jar资源下的每个类进行循环，具体如下
 
+# Initializers
+org.springframework.context.ApplicationContextInitializer=\
+org.springframework.boot.autoconfigure.SharedMetadataReaderFactoryContextInitializer,\
+org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener
 
+# Application Listeners
+org.springframework.context.ApplicationListener=\
+org.springframework.boot.autoconfigure.BackgroundPreinitializer
 
+# Auto Configuration Import Listeners
+org.springframework.boot.autoconfigure.AutoConfigurationImportListener=\
+org.springframework.boot.autoconfigure.condition.ConditionEvaluationReportAutoConfigurationImportListener
 
+# Auto Configuration Import Filters
+org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
+org.springframework.boot.autoconfigure.condition.OnBeanCondition,\
+org.springframework.boot.autoconfigure.condition.OnClassCondition,\
+org.springframework.boot.autoconfigure.condition.OnWebApplicationCondition
 
+第三重，将对每个类下的实现进行循环
 
-
+最后封装到result（MultiValueMap）中返回
+```
 
 
