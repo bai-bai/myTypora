@@ -418,6 +418,27 @@ AND newsEdit=#{etidName}
 因为这里有 ">"  "<=" 特殊字符所以要使用 <![CDATA[   ]]> 来注释，但是有<if> 标签，所以把<if>等 放外面
 ```
 
+## Spring
+
+### 注解
+
+[@Import](https://www.jianshu.com/p/56d4cadbe5c9)
+
+> 可以在类级别声明或作为元注释声明。
+>
+> 该注解只能在类上面使用,不能在方法上面 
+>
+> 元注释就是 作为 注解 的 注解
+
+- 将 @Import 标记的类注册成 bean
+- 导入@Configuration类”的具现化，将标有注解“@Configuration”的类和该类中所有的“@Bean”注册为Bean
+- 导入ImportBeanDefinitionRegistrar的具体实现，将实现了ImportBeanDefinitionRegistrar接口的类中指定的类加载，不包含该类本身
+- 导入ImportSelector的具体实现，略
+
+
+
+
+
 # Linux
 
 ### 1. Linux概述
@@ -1144,7 +1165,7 @@ for(let i of arr){
 
 4、every，有return，遍历数组，并依据判断条件，判断数组的元素是否全满足，若满足则返回ture，反之返回false
 
-5、some，有return，遍历数组，依据判断条件，数组的元素是否有一个满足，若有一个满足则返回ture，反之返回false
+5、some，有return，遍历数组，依据判断条件，数组的元素是否有一个满足，若有一个满足则返回ture，反之返回false	
 
 6、reduce，有return，该方法有两个参数，第一个参数为回调函数，第二个参数为初始值，其中第二个参数可选。而该方法的回调函数有四个参数（init，next，index，arr），如果调用reduce函数时，其第二个初始值的参数被提供，则init等于被提供的初始值，next为数组中第一个值。如果初始值参数未被提供，则init为数组的第一个值，next为数组的第二个值。之后init则等于上一次循环中return的值
 
@@ -2677,7 +2698,7 @@ Date:   Fri May 18 21:06:15 2018 +0800
 
 # SpringBoot
 
-## Springboot启动的初始化
+## 启动的初始化
 
 ![image-20201030110813493](F:\Other\Typora\Image\image-20201030110813493.png)
 
@@ -2759,5 +2780,184 @@ org.springframework.boot.autoconfigure.condition.OnWebApplicationCondition
 
 最后封装到result（MultiValueMap）中返回
 ```
+
+## 热部署
+
+```xml
+<!-- 热部署依赖 -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <optional>true</optional>
+</dependency>
+
+<!-- 
+实现热部署 
+1.引入热部署依赖
+2.idea不会自动编译，需要通过ctrl+F9来触发
+
+如果想要自动生效得修改idea设置，需要做以下设置
+（1）File-Settings-Compiler-Build Project automatically（设置IDEA自动编译）
+（2）ctrl + shift + alt + / ,选择Registry,勾上 Compiler autoMake allow when app running（运行IDEA在运行时编译）
+以上设置完成后，我们每次将浏览器切换到IDEA前方时，都会触发热部署
+
+热部署的排除
+1.默认情况下，/META-INF/maven，/META-INF/resources，/resources，/static，/templates，/public这些文件夹下的文件修改不会使应用重启
+但是devtools内嵌了一个LiveReload server，当资源发生改变时，浏览器刷新，所以我们也会得到重新刷新的效果
+
+2.同时我们可以根据自己的意愿来设置想要排除的资源，如下
+spring.devtools.restart.exclude=static/**,public/**
+
+-->
+<!--
+
+热部署的实现原理，是使用了两个classLoader（类加载器），其中一个classLoader只加载那些不会轻易改变的类（如第三方Jar包等），而另一个
+classLoader则会加载会被修改的类，这个类加载器也被称为restartClassLoader，这样在代码被改变的时候，restartClassLoader则会被丢
+弃，而重新创建的restartClassLoader则会加载到被改变的内容，需要重新加载的内容较少，所以可以较为快速的及逆行重启
+
+-->
+```
+
+## 配置文件的位置
+
+> springboot 启动会扫描以下位置的application.properties或者application.yml文件作为Spring boot的默认配置文件
+>
+> 优先级由高到底，高优先级的配置会覆盖低优先级的配置
+>
+> SpringBoot会从这四个位置全部加载主配置文件；互补配置
+
+- file:./config/  跟路径下config文件夹
+- file:./  项目的跟路径，如果当前的项目有父工程，配置文件要放在父工程 的根路径
+- classpath:/config/
+- classpath:/
+
+## yaml
+
+> yml是YAML（YAML Ain't Markup Language）语言的文件，以数据为中心，比properties、xml等更适合做配置文件
+>
+> yml和xml相比，少了一些结构化的代码，使数据更直接，一目了然。
+>
+> 相比properties文件更简洁
+
+### 语法
+
+> 以空格的缩进程度来控制层级关系。空格的个数并不重要，只要左边空格对齐则视为同一个层级。且大小写敏感。支持字面值，对象，数组三种数据结构，也支持复合结构
+
+- 字面值：字符串，布尔类型，数值，日期。字符串默认不加引号，单引号会转义特殊字符。日期格式支持yyyy/MM/dd HH:mm:ss
+- 对象：由键值对组成，形如 key:(空格)value 的数据组成。冒号后面的空格是必须要有的，每组键值对占用一行，且缩进的程度要一致，也可以使用行内写法：{k1: v1, ....kn: vn}
+- 数组：由形如 -(空格)value 的数据组成。短横线后面的空格是必须要有的，每组数据占用一行，且缩进的程度要一致，也可以使用行内写法： [1,2,...n]
+- 复合结构：上面三种数据结构任意组合
+
+```yaml
+yaml:
+  str: 字符串可以不加引号
+  specialStr: "双引号直接输出\n特殊字符"
+  specialStr2: '单引号可以转义\n特殊字符'
+  flag: false
+  num: 666
+  Dnum: 88.88
+  list:
+    - one
+    - two
+    - three
+  #set: [1,2,2,3]
+  set:
+   - 1
+   - 2
+   - 1
+  map: {k1: v1, k2: v2}
+  users:
+    - name: txjava
+      salary: 15000.00
+    - name: liangge
+      salary: 18888.88
+```
+
+## 属性绑定
+
+> @ConfigurationProperties，将配置文件中的属性注入到指定类中
+>
+> @Component，将指定类注入到IOC容器中
+
+```java
+@Component
+@ConfigurationProperties("acme")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class AcmeProperties {
+
+    private boolean enabled;
+
+    private InetAddress remoteAddress;
+
+    private final Security security = new Security();
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+}
+```
+
+> 为了让当前的实体类能在配置文件中有对应的提示，我们需要引入如下的依赖
+>
+> 加完依赖后通过Ctrl+F9来使之生效
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+
+### 构造器绑定
+
+> 要使用构造函数绑定，必须使用@EnableConfigurationProperties或配置属性扫描启用类。
+>
+> 不能对由常规Spring机制创建的Bean使用构造函数绑定
+>
+> （例如@Component Bean、通过@Bean方法创建的Bean或使用@Import加载的Bean
+
+```java
+@ConfigurationProperties("acme")
+@ConstructorBinding
+public class AcmeProperties {
+
+    private boolean enabled;
+
+    private InetAddress remoteAddress;
+
+    private final Security security ;
+
+    public AcmeProperties(boolean enabled, InetAddress remoteAddress, Security security) {
+        this.enabled = enabled;
+        this.remoteAddress = remoteAddress;
+    }
+}
+
+@RestController
+@EnableConfigurationProperties(AcmeProperties.class)
+public class YamlController {
+
+    @Autowired
+    private AcmeProperties acmeProperties;
+
+    @RequestMapping("yaml")
+    public AcmeProperties yaml(){
+        System.out.println(acmeProperties);
+        return acmeProperties;
+    }
+}
+```
+
+
+
+有待验证的想法
+
+
+
+
+
 
 
