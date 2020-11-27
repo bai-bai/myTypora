@@ -2698,89 +2698,6 @@ Date:   Fri May 18 21:06:15 2018 +0800
 
 # SpringBoot
 
-## 启动的初始化
-
-![image-20201030110813493](F:\Other\Typora\Image\image-20201030110813493.png)
-
-```java
-如上图所示，run方法中主要分为两个步骤
-
-- new SpringApplication：环境的初始化和其他的准备工作
-- run：启动容器，以及自动配置类的服务
-```
-
-![image-20201030111335058](F:\Other\Typora\Image\image-20201030111335058.png)
-
-```java
-如上图，new SpringApplication 中的初始化工作
-
-1.设置初始化器
-2.设置容器的监听器
-```
-
-![image-20201030112209936](F:\Other\Typora\Image\image-20201030112209936.png)
-
-```java
-如上图，此处是对如何进行SpringBoot初始化容器的配置的调用
-```
-
-![image-20201030112828975](F:\Other\Typora\Image\image-20201030112828975.png)
-
-```java
-如上图，SpringBoot容器的初始化工作
-    
-关键逻辑为：利用SpringFactortiesLoader类对所有Jar包资源进行扫描，找出位于Jar包下，META-INF/spring.factorties的文件
-		  并扫描每个文件中的各项配置（如：自动配置类的名字、Springboot初始化器等），其中关键参数type，则是将扫描结果进行
-    	  筛选，此处传入的应该为ApplicationContextInitializer（Springboot的初始化器）
-    	  而且在扫描的过程中，也会对所有扫描到的资源进行缓存，在之后的运行中，则会在缓存中进行查找，而不需要再次进行扫描。
-```
-
-![image-20201030113127039](F:\Other\Typora\Image\image-20201030113127039.png)
-
-```
-如上图，展示的是springboot的初始化器
-```
-
-![image-20201030150355668](F:\Other\Typora\Image\image-20201030150355668.png)
-
-```java
-如上图，为SpringFactortiesLoader类对Jar包资源进行扫描的实现调用
-```
-
-![image-20201030153014671](F:\Other\Typora\Image\image-20201030153014671.png)
-
-```xml
-如上图，为SpringFactortiesLoader类对Jar包资源进行扫描的实现逻辑
-
-其中包含了三重循环
-第一重，所有的Jar资源进行循环
-
-第二重，对扫描到的Jar资源下的每个类进行循环，具体如下
-
-# Initializers
-org.springframework.context.ApplicationContextInitializer=\
-org.springframework.boot.autoconfigure.SharedMetadataReaderFactoryContextInitializer,\
-org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener
-
-# Application Listeners
-org.springframework.context.ApplicationListener=\
-org.springframework.boot.autoconfigure.BackgroundPreinitializer
-
-# Auto Configuration Import Listeners
-org.springframework.boot.autoconfigure.AutoConfigurationImportListener=\
-org.springframework.boot.autoconfigure.condition.ConditionEvaluationReportAutoConfigurationImportListener
-
-# Auto Configuration Import Filters
-org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
-org.springframework.boot.autoconfigure.condition.OnBeanCondition,\
-org.springframework.boot.autoconfigure.condition.OnClassCondition,\
-org.springframework.boot.autoconfigure.condition.OnWebApplicationCondition
-
-第三重，将对每个类下的实现进行循环
-
-最后封装到result（MultiValueMap）中返回
-```
-
 ## 热部署
 
 ```xml
@@ -2878,6 +2795,8 @@ yaml:
 > @ConfigurationProperties，将配置文件中的属性注入到指定类中
 >
 > @Component，将指定类注入到IOC容器中
+>
+> 如果不是用@Component，也可以在需要注入的类中使用@EnableConfigurationProperties(xxx.class)进行开启配置
 
 ```java
 @Component
@@ -2917,7 +2836,7 @@ public class AcmeProperties {
 >
 > 不能对由常规Spring机制创建的Bean使用构造函数绑定
 >
-> （例如@Component Bean、通过@Bean方法创建的Bean或使用@Import加载的Bean
+> （例如@Component、通过@Bean方法创建的Bean或使用@Import加载的Bean
 
 ```java
 @ConfigurationProperties("acme")
@@ -2951,11 +2870,339 @@ public class YamlController {
 }
 ```
 
+### 配置类
+
+> 使用注解@Configuration可以将类注册为配置类，等同于xml配置文件（Beans），可以在配置类中定义Bean
+>
+> 而在SpringBoot2.2.1之后，只要在主配置类的扫描范围之内，那么该类则自带有配置类的功能，无需添加@Configuration
+
+### 第三方组件注入
+
+> 除了使用@ConfigurationProperties注释类之外，还可以在public@Bean方法上使用它。如果要将属性绑定到不在您控制范围内的第三方组件
+>
+> 依然采用之前的案例的yaml配置
+>
+> 创建一个其他组件类
+
+```java
+@Data
+public class AnotherComponent {
+
+    private boolean enabled;
+
+    private InetAddress remoteAddress;
+}
+
+@Component
+public class MyService {
+
+    @ConfigurationProperties("acme")
+    @Bean
+    public AnotherComponent anotherComponent(){
+        return new AnotherComponent();
+    }
+}
+```
+
+### 松散绑定
+
+> Spring Boot使用一些宽松的规则将环境属性绑定到@ConfigurationProperties bean，因此环境属性名和bean属性名之间不需要完全匹配。
+
+| 属性文件中配置                    | 说明                                     |
+| --------------------------------- | ---------------------------------------- |
+| acme.my-project.person.first-name | 羊肉串模式case, 推荐使用                 |
+| acme.myProject.person.firstName   | 标准驼峰模式                             |
+| acme.my_project.person.first_name | 下划线模式                               |
+| ACME_MYPROJECT_PERSON_FIRSTNAME   | 大写下划线，如果使用系统环境时候推荐使用 |
+
+### 属性绑定校验
+
+> 每当使用Spring的@Validated注释对@ConfigurationProperties类进行注释时，Spring Boot就会尝试验证它们。你可以用JSR-303 javax.validation直接在配置类上的约束注释。为此，请确保类路径上有一个兼容的JSR-303实现，此处我们用的是hibernate的实现，然后将约束注释添加到字段中
+
+```xml
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-validator</artifactId>
+    <version>5.2.0.Final</version>
+</dependency>
+```
+
+```java
+@Data
+@Component
+@ConfigurationProperties("acme.my-person.person")
+@Validated //spring提供的注解
+
+public class OwnerProperties {
 
 
-有待验证的想法
 
+    @NotNull   //javax.validation.constraints提供
+    private String firstName;
 
+    @Max(35)
+    private int age;
+
+    @Email
+    private String email;
+
+}
+```
+
+```yaml
+acme:
+  my-person:
+    person:
+      FIRST_name: 泰森
+      age: 34
+      email: aaa
+```
+
+### 单个属性绑定和多个属性绑定
+
+|              | @ConfigurationProperties | @Value         |
+| ------------ | ------------------------ | -------------- |
+| 松散绑定     | Yes                      | Limit          |
+| 元数据支持   | Yes                      | No             |
+| SpEL 表达式  | No                       | Yes            |
+| 复杂类型绑定 | Yes                      | No             |
+| 校验         | Yes                      | No             |
+| 应用场景     | Boot里面属性多个绑定     | 单个属性的绑定 |
+
+> 1. 松散绑定，对于@Value注解来说，它的松散绑定是受限制的，建议使用相同的属性值进行绑定
+>
+> 2. 元数据支持指的是，在我们引入的spring-boot-configuration-processor依赖之后，该实现类会为我们产生一个JSON资源文件，该文件为我们提供在Spring配置文件中的提示的支持，但是对于@Value注解而言，则没有元数据的支持
+
+## Profile
+
+> 我们可以通过多样性的文档来解决多环境的需求。在一个yml中我们可以把文档划分成多个块
+
+```yaml
+acme:
+  enabled: true
+  remote-address: 192.168.0.108
+  spring:
+    profiles: default
+---
+spring:
+  profiles: development
+acme:
+  enabled: true
+  remote-address: 192.168.0.109
+
+---
+spring:
+  profiles: production
+acme:
+  enabled: true
+  remote-address: 192.168.0.110
+```
+
+> 在启动的时候我们通过spring.profile.active: development来指定开启哪个profile
+>
+> 我们也可以采用多个文件来做。
+>
+> 我们创建application-dev.yml, application-pro.yml
+>
+> application-{profile}.xml
+
+## 初始化原理
+
+> 如下所示，为SpringBoot启动的两个步骤
+
+```java
+/**
+ * 此处代码分为两个步骤
+ * 1、new SpringApplication(primarySources)
+ * 进行SpringBoot的初始化工作等准备工作，主要完成SpringInitializers的加载
+ * 而具体spring初始化器是如何发挥作用的，可以去了解Web Servlet3.0的具体内容
+ * -----------------------------------------------————————————————————————————
+ * 2、run(args)
+ * 启动容器，以及自动配置类的配置
+ */
+public static ConfigurableApplicationContext run(Class<?>[] primarySources, String[] args) {
+	return new SpringApplication(primarySources).run(args);
+}
+```
+
+> 以下是对上述第一步骤代码的详细分析
+
+```java
+/**
+ * 此处代码为对Spring初始化的调用
+ */
+public SpringApplication(Class<?>... primarySources) {
+    this(null, primarySources);
+}
+
+/**
+ * 此处代码为被调用的初始化方法
+ * 以下代码主要分为两个部分
+ * 1、setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class))
+ * 设置SpringInitializers（初始化器）
+ * ——————————————————————————————————————————————————————————————————————————————————————————
+ * 2、setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class))
+ * 设置Spring监听器
+ *
+ * 步骤一和步骤二的代码内容很相似，下面只列举步骤一进行详细分析
+ */
+public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+    this.resourceLoader = resourceLoader;
+    Assert.notNull(primarySources, "PrimarySources must not be null");
+    this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+    this.webApplicationType = WebApplicationType.deduceFromClasspath();
+    //设置SpringInitializers（初始化器）
+    setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+    //设置Spring监听器
+    setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+    this.mainApplicationClass = deduceMainApplicationClass();
+}
+
+/**
+ * 进入setInitializers方法
+ * 可以发现此处代码是将已经得到的initializers（初始化器）设置到一个集合中
+ */
+public void setInitializers(Collection<? extends ApplicationContextInitializer<?>> initializers) {
+    this.initializers = new ArrayList<>(initializers);
+    this.initializers.addAll(Arrays.asList(initializers));
+}
+
+/**
+ * 进入getSpringFactoriesInstances(ApplicationContextInitializer.class)
+ * 此处主要为获取ClassPath所有的spring.factories下的name
+ */
+private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
+    ClassLoader classLoader = getClassLoader();
+    // Use names and ensure unique to protect against duplicates
+    //获取ClassPath所有的spring.factories下的name（比如：自动配置类的名字）
+    Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
+    //根据类名创建实例
+    List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
+    //排序
+    AnnotationAwareOrderComparator.sort(instances);
+    //返回实例集合
+    return instances;
+}
+
+/**
+ * 进入SpringFactoriesLoader.loadFactoryNames(type, classLoader)
+ * 此处代码主要实现将获取到的FactoryNames进行过滤
+ */
+public static List<String> loadFactoryNames(Class<?> factoryType, @Nullable ClassLoader classLoader) {
+    //根据参数factoryType，获取类的名字为ApplicationContextInitializer
+    String factoryTypeName = factoryType.getName();
+    //获取到所有的FactoryNames，根据factoryTypeName过滤
+    return (List)loadSpringFactories(classLoader).getOrDefault(factoryTypeName, Collections.emptyList());
+}
+
+/**
+ * 进入(List)loadSpringFactories(classLoader)
+ * 此方法将扫描ClassPath下所有Jar下的META-INF下的spring.factories，解析出所有的factoryTypeName并返回
+ */
+private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
+    //获取缓存结果
+    MultiValueMap<String, String> result = (MultiValueMap)cache.get(classLoader);
+    if (result != null) {
+        return result;
+    } else {
+        //缓存为null，则进行jar的扫描
+        try {
+            //扫描所有classPath下jar下的META-INF/spring.factories文件，并将结果封装为Enumeration<URL>（一个枚举类型）
+            Enumeration<URL> urls = classLoader != null ? classLoader.getResources("META-INF/spring.factories") : ClassLoader.getSystemResources("META-INF/spring.factories");
+            LinkedMultiValueMap result = new LinkedMultiValueMap();
+			//相当于循环每个文件进行解析
+            while(urls.hasMoreElements()) {
+                URL url = (URL)urls.nextElement();
+                UrlResource resource = new UrlResource(url);
+                Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+                Iterator var6 = properties.entrySet().iterator();
+				//获取文件中所有的键值对并循环
+                while(var6.hasNext()) {
+                    Entry<?, ?> entry = (Entry)var6.next();
+                    String factoryTypeName = ((String)entry.getKey()).trim();
+                    String[] var9 = StringUtils.commaDelimitedListToStringArray((String)entry.getValue());
+                    int var10 = var9.length;
+					//获取每个值并根据逗号分隔，然后循环每个值，将解析的值添加到result
+                    for(int var11 = 0; var11 < var10; ++var11) {
+                        String factoryImplementationName = var9[var11];
+                        result.add(factoryTypeName, factoryImplementationName.trim());
+                    }
+                }
+            }
+			//将结果缓存
+            cache.put(classLoader, result);
+            return result;
+        } catch (IOException var13) {
+            throw new IllegalArgumentException("Unable to load factories from location [META-INF/spring.factories]", var13);
+        }
+    } 
+}
+```
+
+> 以下是对上述第二步骤代码的详细分析，run方法执行后，SpringIOC容器被初始化，那么需要被注册到容器中的Bean也是这时被加载注册到容器中
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration //此注解相当于@Configuration
+@EnableAutoConfiguration //启用自动配置类
+@ComponentScan(excludeFilters = { @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+		@Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {
+    //略
+}
+
+/**
+ * 进入@EnableAutoConfiguration
+ * 此处注解代码主要完成自动扫描包的配置、自动配置类的加载
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@AutoConfigurationPackage // 配置自动扫描包
+@Import(AutoConfigurationImportSelector.class) //引入自动配置选择器
+
+/**
+ * 进入AutoConfigurationImportSelector.class
+ * 获取并筛选classPath下存在相关资源的自动配置类
+ */
+public String[] selectImports(AnnotationMetadata annotationMetadata) {
+    if (!isEnabled(annotationMetadata)) {
+        return NO_IMPORTS;
+    }
+    //获取并筛选自动配置类
+    AutoConfigurationEntry autoConfigurationEntry = getAutoConfigurationEntry(annotationMetadata);
+    return StringUtils.toStringArray(autoConfigurationEntry.getConfigurations());
+}
+
+/**
+ * 进入getAutoConfigurationEntry(annotationMetadata)
+ * 获取所有的自动配置类，并去重过滤，返回项目需要的自动配置类
+ */
+protected AutoConfigurationEntry getAutoConfigurationEntry(AnnotationMetadata annotationMetadata) {
+    if (!isEnabled(annotationMetadata)) {
+        return EMPTY_ENTRY;
+    }
+    //获取注解元数据（如注解属性等）
+    AnnotationAttributes attributes = getAttributes(annotationMetadata);
+    //获取所有的自动配置类，具体实现参考步骤一的实现
+    List<String> configurations = getCandidateConfigurations(annotationMetadata, attributes);
+    //排除重复
+    configurations = removeDuplicates(configurations);
+    //排除手动设置的重复
+    Set<String> exclusions = getExclusions(annotationMetadata, attributes);
+    checkExcludedClasses(configurations, exclusions);
+    //移除排除的自动配置类
+    configurations.removeAll(exclusions);
+    //过滤掉没有引入的自动配置类，先获取自动配置类的过滤器，再利用过滤器进行过滤
+    configurations = getConfigurationClassFilter().filter(configurations);
+    fireAutoConfigurationImportEvents(configurations, exclusions);
+    return new AutoConfigurationEntry(configurations, exclusions);
+}
+```
 
 
 
