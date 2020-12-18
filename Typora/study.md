@@ -3204,6 +3204,194 @@ protected AutoConfigurationEntry getAutoConfigurationEntry(AnnotationMetadata an
 }
 ```
 
+## 条件注解
+
+> @Conditional派生注解（Spring注解版原生的@Conditional作用）
+>
+> 作用：必须是@Conditional指定的条件成立，才给容器中添加组件，配置配里面的所有内容才生效；
+
+| @Conditional扩展注解            | 作用（判断是否满足当前指定条件）                 |
+| ------------------------------- | ------------------------------------------------ |
+| @ConditionalOnJava              | 系统的java版本是否符合要求                       |
+| @ConditionalOnBean              | 容器中存在指定Bean；                             |
+| @ConditionalOnMissingBean       | 容器中不存在指定Bean；                           |
+| @ConditionalOnExpression        | 满足SpEL表达式指定                               |
+| @ConditionalOnClass             | 系统中有指定的类                                 |
+| @ConditionalOnMissingClass      | 系统中没有指定的类                               |
+| @ConditionalOnSingleCandidate   | 容器中只有一个指定的Bean，或者这个Bean是首选Bean |
+| @ConditionalOnProperty          | 系统中指定的属性是否有指定的值                   |
+| @ConditionalOnResource          | 类路径下是否存在指定资源文件                     |
+| @ConditionalOnWebApplication    | 当前是web环境                                    |
+| @ConditionalOnNotWebApplication | 当前不是web环境                                  |
+| @ConditionalOnJndi              | JNDI存在指定项                                   |
+
+```
+1）、SpringBoot启动会加载大量的自动配置类
+2）、我们看我们需要的功能有没有SpringBoot默认写好的自动配置类；
+3）、我们再来看这个自动配置类中到底配置了哪些组件；（只要我们要用的组件有，我们就不需要再来配置了）
+4）、给容器中自动配置类添加组件的时候，会从properties类中获取某些属性。我们就可以在配置文件中指定这些属性
+```
+
+## 数据源配置
+
+> 通过查看DataSourceAutoConfiguration可知，SpringBoot会为我们创建DataSource Bean，并且该Bean只会创建一个
+>
+> 而通过配置类我们知道SpringBoot自动配置数据源支持以下三种方式（按顺序分别为）
+>
+> Hikari、Tomcat、Dbcp2等
+>
+> 由于spring-boot-start-jdbc的依赖中默认引用的是Hikari，所以SpringBoot默认的数据源也是Hikari
+>
+> 如果要使用其他类型的数据源则需要自行编写配置类进行配置
+
+### 默认配置
+
+#### 引入依赖
+
+```xml
+<!-- 使用默认的数据源配置 -->
+
+<!-- jdbc数据库连接 -->
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-jdbc</artifactId>
+</dependency>
+
+<!-- mysql连接 -->
+<dependency>
+   <groupId>mysql</groupId>
+   <artifactId>mysql-connector-java</artifactId>
+   <scope>runtime</scope>
+</dependency>
+```
+
+#### yml配置
+
+```yaml
+# 注意此处com.mysql.cj.jdbc.Driver 带有cj表示使用spi的思想，在url的配置中要加上时区和编码设置
+spring:
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.10.203:3306/byz_boot?useUnicode=true&characterEncoding=utf8&autoReconnect=true&failOverReadOnly=false
+    username: root
+    password: root
+```
+
+### 配置druid数据源
+
+#### 引入依赖
+
+```xml
+<!-- 阿里druid数据源 -->
+<dependency>
+   <groupId>com.alibaba</groupId>
+   <artifactId>druid</artifactId>
+   <version>1.0.9</version>
+</dependency>
+
+<!-- log4j -->
+<dependency>
+   <groupId>log4j</groupId>
+   <artifactId>log4j</artifactId>
+   <version>1.2.15</version>
+</dependency>
+```
+
+#### yml配置
+
+```yaml
+spring:
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.10.203:3306/byz_boot?useUnicode=true&characterEncoding=utf8&autoReconnect=true&failOverReadOnly=false
+    username: root
+    password: root
+    type: com.alibaba.druid.pool.DruidDataSource
+    initialSize: 5
+    minIdle: 5
+    maxActive: 20
+    maxWait: 60000
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 300000
+    validationQuery: SELECT 1 FROM DUAL
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+```
+
+数据源配置类
+
+```java
+package com.byz.sboot.config;
+
+import com.alibaba.druid.pool.DruidDataSource;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DruidConfig {
+
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource")
+    public DruidDataSource dataSource(){
+        return new DruidDataSource();
+    }
+
+}
+```
+
+### 测试查询
+
+> 此处遇到一个mysql Jar包与Mysql数据库不一致的问题，修改导入的依赖为5.1.8版本后解决
+
+```java
+@Autowired
+private JdbcTemplate jdbcTemplate;
+
+
+@GetMapping("query")
+public List<Map<String, Object>>  query(){
+    System.out.println(">>>>>>>>>>>>>" + dataSource);
+    List<Map<String, Object>> maps = jdbcTemplate.queryForList("select * from employee");
+    return maps;
+}
+```
+
+```yaml
+spring:
+  datasource:
+    driverClassName: com.mysql.jdbc.Driver
+    url: jdbc:mysql://192.168.10.203:3306/byz_boot?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    username: root
+    password: root
+    type: com.alibaba.druid.pool.DruidDataSource
+    initialSize: 5
+    minIdle: 5
+    maxActive: 20
+    maxWait: 60000
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 300000
+    validationQuery: SELECT 1 FROM DUAL
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
