@@ -459,9 +459,9 @@ AND newsEdit=#{etidName}
 #### 2.2 安装步骤（略）
 
 - 自定义分区
-  - /boot（引导文件）
-  - swap（内存不够时，可以代替内存使用）
-  - /（根分区）
+  - /boot（引导文件），200M
+  - swap（内存不够时，可以代替内存使用）2G
+  - /（根分区），剩余可以空间
 
 #### 2.3 连接网络
 
@@ -1876,7 +1876,7 @@ docker rm $(docker ps -qa)
 >    - 当我们使用命令创建一个docker容器，它会在所有镜像层面之前添加一个可写层。这个可写层有运行在cpu上的进程，而且有两个不同的状态，运行态和退出态。当我们使用docker run启动容器，容器就进入运行态，当我们停止容器，它就进入退出态
 >    - 当我们有一个docker容器从运行态到退出态，那我们对该容器运行期间的更改都会保存在容器的文件系统中。注意，此处更改在容器的文件系统中，对于镜像本身并无影响
 >    - 我们可以用同一个镜像启动多个的容器，这些容器启动后彼此是互相隔离的，我们对于一个容器的更改只局限于那一个容器本身
->    - 如果我们对容器的底层镜像进行更改，正在进行的容器不会发生动态更新。如果想更新容器到其镜。像的新版本，那么必须当心，确保我们是以正确的方式构建了数据结构，否则我们可能会导致损失容器中所有数据的后果
+>    - 如果我们对容器的底层镜像进行更改，正在进行的容器不会发生动态更新。如果想更新容器到其镜像的新版本，那么必须当心，确保我们是以正确的方式构建了数据结构，否则我们可能会导致损失容器中所有数据的后果
 >    - 64字符的十六进制的字符串来定义容器ID，它是容器的唯一标识符。容器之间的交互是依靠容器ID识别的，由于容器ID的字符太长，我们通常只需键入容器ID的前4个字符即可。当然，我们还可以使用容器名，但显然用4字符的容器ID更为简便。
 
 ## 三、Docker应用
@@ -1949,7 +1949,7 @@ cmd 需要执行的命令（在workdir下执行，cmd可以写多个，以最后
 
 #示例：
 from daocloud.io/library/tomcat:8.5.15-jre8
-copy ssm.war /usr/local/tomcat/webapps
+copy ssm.war /usr/local/tomcat/webapps  
 
 #编写完Dockerfile后需要通过命令将其制作为镜像，并且要在Dockerfile的当前目录下，之后即可在镜像中查看到指定的镜像信息，注意最后的 .（当前目录）
 docker build -t 镜像名称[:tag] ./
@@ -2694,6 +2694,73 @@ Date:   Fri May 18 21:06:15 2018 +0800
 
 
 
+# SpringMVC
+
+## 常用注解
+
+> @RequestMapping
+
+该注解主要声明方法的访问路径
+
+| value/path | Stirng[]        | 方法的请求路径                                               |
+| ---------- | --------------- | ------------------------------------------------------------ |
+| method     | RequestMethod[] | 默认匹配GET或POST请求，可以指定GET/POST/PUT/DELETE           |
+| params     | String[]        | 指定request中get或post请求时，必须包含某些参数值，如图所示，该方法参数必须包含username，password，且password不能为123546![image-20201225164327999](F:\Other\Typora\Image\image-20201225164327999.png) |
+| consumes   | String[]        | 指定处理请求提交的内容类型（Content-Type）![image-20201225164511240](F:\Other\Typora\Image\image-20201225164511240.png) |
+| produces   | String[]        | 指定返回的内容类型，仅当request请求头中的(Accept)类型中包含该指定类型才返回![image-20201225164546696](F:\Other\Typora\Image\image-20201225164546696.png) |
+| headers    | String[]        | 指定request中必须包含某些指定的header值，才能让该方法处理请求 |
+
+**补充： RequestMapping 注解中的映射请求可以支持3中通配符：**
+
+1. ?，匹配文件中的一个字符
+
+2. *，匹配任意字符
+
+3. **，匹配多层路径
+
+> @RequestParam
+
+该注解会用户传来的参数与方法上的参数进行绑定
+
+| required     | boolean | 表示该参数是否必须，默认为true，但是如果没有使用@RequestParam注解，并且方法参数与入参同名时，Spring会自动为我们进行参数绑定 |
+| ------------ | ------- | ------------------------------------------------------------ |
+| value        | String  | 参数的名字，通常在入参和方法参数名称不一样时进行设置         |
+| defaultValue | String  | 默认值                                                       |
+
+**补充：@RequestParam支持我们传入一个Map<String,String>参数用于接收所有的参数集合，但是需要注意的是，如果使用Map接受参数，并且入参中包含多个同名参数（如表单中的多选框）则Map中只会有第一个值**
+
+> @PathVariable
+
+该注解用于接收请求路径中占位符的值（主要用于Rest风格的访问）
+
+| value    | String  | 参数的名字 |
+| -------- | ------- | ---------- |
+| required | boolean | 是否必须   |
+
+**补充：@PathVariable支持我们传入一个Map<String,String>参数用于接收所有的参数集合，但是需要注意的是，如果使用Map接受参数，并且入参中包含多个同名参数（如表单中的多选框）则Map中只会有第一个值**
+
+> @RequestAttribute
+
+获取请求域中的属性
+
+> @RequestHeader
+
+获取请求头中的值
+
+> @RequestBody
+
+获取请求体中的值
+
+> @CookieValue
+
+获取Cookie的值
+
+> @ModelAttribute
+
+
+
+> @MatrixVariable
+
 
 
 # SpringBoot
@@ -2789,6 +2856,16 @@ yaml:
     - name: liangge
       salary: 18888.88
 ```
+
+## Spring注解
+
+> ### @Import({User.class, DBHelper.class})
+
+给容器中自动创建出这两个类型的组件、默认组件的名字就是全类名
+
+> ### @ImportResource("classpath:beans.xml")
+
+将配置文件中的组件导入到类中
 
 ## 属性绑定
 
@@ -3384,15 +3461,111 @@ spring:
 
 
 
+# Nginx
+
+## 一、引言
+
+> Nginx解决了工作中的那些问题，如下图所示
+>
+> Nginx负载均衡，可以帮助我们的服务轻松承受较大的并发量（Docker配置后可以轻松成承受5w+的并发量，而Tomcat默认线程池只有150）
+>
+> Nginx可以实现动静分离，动态资源和静态资源分开处理等诸多好处
+
+---------------------
+
+> 一般架构
+
+![image-20201222163245097](F:\Other\Typora\Image\image-20201222163245097.png)
+
+> 搭建Nginx集群架构
+>
+
+![image-20201222163314156](F:\Other\Typora\Image\image-20201222163314156.png)
+
+## 二、Nginx安装
+
+### 2.1 安装Nginx
+
+```sh
+version: '3.1'
+services:
+  nginx:
+    restart: always			
+    image: daocloud.io/library/nginx:latest
+    containor_name: nginx
+    ports:
+      - 80:80
+```
+
+### 2.2 Nginx的配置文件
+
+> 关于Nginx的核心配置文件nginx.conf，该文件位于/etc/nginx目录下
+>
+> 该文件的内容如下
+
+```sh
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+# 以上内容统称全局块
+# worker_processes的数值越大则nginx的并发能力越强
+# error_log代表Nginx的错误日志文件存放位置
 
 
+events {
+    worker_connections  1024;
+}
+# event块
+# worker_connections的数值越大则nginx的并发能力越强
 
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
 
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
 
+    access_log  /var/log/nginx/access.log  main;
 
+    sendfile        on;
+    #tcp_nopush     on;
 
+    keepalive_timeout  65;
 
+    #gzip  on;
 
+    include /etc/nginx/conf.d/*.conf;
+}
+# http块
+# include表示引入一个外部文件
+# include       /etc/nginx/mime.types -》引入媒体类型
+# include /etc/nginx/conf.d/*.conf -》引入conf.d下所有.conf结尾的配置文件
+```
 
+```sh
+# 以下为nginx.conf引入的配置文件内容
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  localhost;
 
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+    # location块
+    # root：接受到的请求根据/usr/share/nginx/html去查找静态资源
+    # index：默认去上述路径找到index.html或index.htm
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+# server块
+# listen：表示监听80端口
+# server_name：表示Nginx接受请求的域名/IP
+```
 
